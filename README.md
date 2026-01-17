@@ -1,73 +1,205 @@
-# Welcome to your Lovable project
+# Admin Panel
 
-## Project info
+A modern, production-ready admin panel built with React 18, TypeScript, and Tailwind CSS.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🚀 Getting Started
 
-## How can I edit this code?
+### Prerequisites
 
-There are several ways of editing your application.
+- Node.js 18+ 
+- npm or bun
 
-**Use Lovable**
+### Installation
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+```bash
+# Install dependencies
+npm install
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
 ```
 
-**Edit a file directly in GitHub**
+### Demo Credentials
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- **Email:** admin@example.com
+- **Password:** admin123
 
-**Use GitHub Codespaces**
+## 📁 Folder Structure
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```
+src/
+├── components/
+│   ├── common/          # Reusable UI components
+│   │   ├── Button.tsx   # Button with variants and loading state
+│   │   ├── Input.tsx    # Input with icons and validation
+│   │   ├── Table.tsx    # Table with pagination
+│   │   ├── Modal.tsx    # Modal/dialog component
+│   │   ├── Form.tsx     # Form wrapper components
+│   │   ├── Card.tsx     # Card and StatCard components
+│   │   ├── Badge.tsx    # Status badges
+│   │   └── index.ts     # Barrel export
+│   └── ui/              # shadcn/ui components
+├── layouts/
+│   └── AdminLayout.tsx  # Main admin layout with sidebar
+├── pages/
+│   ├── Login.tsx        # Authentication screen
+│   ├── Dashboard.tsx    # Overview with charts
+│   ├── FamilyManagement.tsx  # Family CRUD
+│   ├── AIFeedback.tsx   # AI response review
+│   └── AIControl.tsx    # AI configuration
+├── hooks/               # Custom React hooks
+├── lib/                 # Utilities
+├── services/            # API services (add as needed)
+└── index.css            # Design system tokens
+```
 
-## What technologies are used for this project?
+## 🎨 Theme Configuration
 
-This project is built with:
+The design system is centralized in two files:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 1. `src/index.css` - CSS Variables
 
-## How can I deploy this project?
+All colors are defined as HSL values:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+```css
+:root {
+  --primary: 222 47% 20%;           /* Deep slate blue */
+  --accent: 173 58% 39%;            /* Teal accent */
+  --status-success: 142 71% 45%;    /* Green */
+  --status-warning: 38 92% 50%;     /* Orange */
+  --status-error: 0 72% 51%;        /* Red */
+  /* ... more tokens */
+}
+```
 
-## Can I connect a custom domain to my Lovable project?
+### 2. `tailwind.config.ts` - Tailwind Integration
 
-Yes, you can!
+Colors are mapped to Tailwind classes:
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+```typescript
+colors: {
+  primary: "hsl(var(--primary))",
+  accent: "hsl(var(--accent))",
+  // ...
+}
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### How to Change Theme Colors
+
+1. Open `src/index.css`
+2. Modify the HSL values in `:root` section
+3. Changes apply globally to all components
+
+**Example - Change primary color to purple:**
+```css
+--primary: 270 50% 40%;  /* Was: 222 47% 20% */
+```
+
+## ➕ Adding New Pages
+
+1. Create a new file in `src/pages/`:
+
+```tsx
+// src/pages/NewPage.tsx
+import React from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/common";
+
+const NewPage = () => {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">New Page</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>Content</CardTitle>
+        </CardHeader>
+        <CardContent>
+          Your content here
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default NewPage;
+```
+
+2. Add route in `src/App.tsx`:
+
+```tsx
+import NewPage from "./pages/NewPage";
+
+// Inside AdminLayout routes:
+<Route path="/new-page" element={<NewPage />} />
+```
+
+3. Add navigation in `src/layouts/AdminLayout.tsx`:
+
+```tsx
+const navItems = [
+  // ... existing items
+  { to: "/new-page", icon: <YourIcon />, label: "New Page" },
+];
+```
+
+## ➕ Adding New Components
+
+1. Create component in `src/components/common/`:
+
+```tsx
+// src/components/common/MyComponent.tsx
+import { cn } from "@/lib/utils";
+import { cva, type VariantProps } from "class-variance-authority";
+
+const myComponentVariants = cva("base-classes", {
+  variants: {
+    variant: {
+      default: "default-styles",
+      // Add more variants
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+  },
+});
+
+export const MyComponent = ({ className, variant, ...props }) => (
+  <div className={cn(myComponentVariants({ variant }), className)} {...props} />
+);
+```
+
+2. Export from `src/components/common/index.ts`:
+
+```tsx
+export { MyComponent } from "./MyComponent";
+```
+
+3. Use in pages:
+
+```tsx
+import { MyComponent } from "@/components/common";
+```
+
+## 🛠 Tech Stack
+
+- **React 18** - UI library
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **shadcn/ui** - UI component primitives
+- **Radix UI** - Accessible components
+- **React Router** - Navigation
+- **Recharts** - Charts and graphs
+- **Lucide React** - Icons
+- **class-variance-authority** - Component variants
+
+## 📱 Features
+
+- ✅ Responsive design (mobile-first)
+- ✅ Dark mode ready (tokens configured)
+- ✅ Accessible components (Radix UI)
+- ✅ Type-safe with TypeScript
+- ✅ Centralized theming
+- ✅ Reusable component library
+- ✅ Clean folder structure
