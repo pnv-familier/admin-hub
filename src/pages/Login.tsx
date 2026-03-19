@@ -29,7 +29,7 @@ const Login = () => {
         setError("Invalid email or password");
       }
       setLoading(false);
-    }, 1000);
+    }, 1);
   };
 
   return (
@@ -38,9 +38,9 @@ const Login = () => {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary mb-4">
-            <span className="text-2xl font-bold text-primary-foreground">A</span>
+            <span className="text-2xl font-bold text-primary-foreground"></span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
+          <h1 className="text-2xl font-bold text-foreground">Familier's Admin Panel</h1>
           <p className="text-muted-foreground mt-1">Sign in to your account</p>
         </div>
 
@@ -90,16 +90,11 @@ const Login = () => {
                 Sign In
               </Button>
             </form>
-
-            <div className="mt-6 text-center text-sm text-muted-foreground">
-              <p>Demo credentials:</p>
-              <p className="font-mono text-xs mt-1">admin@example.com / admin123</p>
-            </div>
           </CardContent>
         </Card>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          © 2024 Admin Panel. All rights reserved.
+          © 2026 Familier's Admin Panel.
         </p>
       </div>
     </div>
