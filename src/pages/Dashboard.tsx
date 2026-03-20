@@ -1,10 +1,19 @@
-import React from "react";
-import { StatCard, Card, CardHeader, CardTitle, CardContent } from "@/components/common";
-import { Users, UsersRound, MessageSquare, ThumbsUp, TrendingUp } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { StatCard, Card, CardHeader, CardTitle, CardContent, Button } from "@/components/common";
+import { Users, UsersRound, MessageSquare, ThumbsUp, TrendingUp, ToggleLeft, ToggleRight, Loader2, AlertCircle } from "lucide-react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useAuth } from "@/hooks/useAuth";
+import { fetchDashboardData, type DashboardData } from "@/services/dashboardService";
 
 const Dashboard = () => {
-  const stats = [
+  const { getToken } = useAuth();
+  const [isRealMode, setIsRealMode] = useState(false);
+  const [realData, setRealData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Mock data (existing)
+  const mockStats = [
     {
       title: "Total Users",
       value: "12,847",
@@ -30,6 +39,75 @@ const Dashboard = () => {
       change: { value: 5.4, type: "decrease" as const },
     },
   ];
+
+  // Real data stats
+  const realStats = realData ? [
+    {
+      title: "Total Users",
+      value: realData.core.totalUsers.toLocaleString(),
+      icon: <Users className="h-5 w-5" />,
+      change: { value: Math.abs(realData.core.userGrowth), type: realData.core.userGrowth >= 0 ? "increase" as const : "decrease" as const },
+    },
+    {
+      title: "Family Groups",
+      value: realData.core.totalFamilyGroups.toLocaleString(),
+      icon: <UsersRound className="h-5 w-5" />,
+      change: { value: Math.abs(realData.core.groupGrowth), type: realData.core.groupGrowth >= 0 ? "increase" as const : "decrease" as const },
+    },
+    {
+      title: "AI Interactions",
+      value: realData.ai.totalInteractions.toLocaleString(),
+      icon: <MessageSquare className="h-5 w-5" />,
+      change: { value: Math.abs(realData.ai.interactionGrowth), type: realData.ai.interactionGrowth >= 0 ? "increase" as const : "decrease" as const },
+    },
+    {
+      title: "AI Feedback",
+      value: realData.ai.totalFeedbacks.toLocaleString(),
+      icon: <ThumbsUp className="h-5 w-5" />,
+      change: { value: Math.abs(realData.ai.feedbackTrend), type: realData.ai.feedbackTrend >= 0 ? "increase" as const : "decrease" as const },
+    },
+  ] : [];
+
+  const stats = isRealMode ? realStats : mockStats;
+
+  const handleModeToggle = async () => {
+    if (!isRealMode) {
+      // Check if user is authenticated first
+      const token = getToken();
+      console.log("[Dashboard] Current token:", token ? `${token.substring(0, 20)}...` : "null");
+      
+      if (!token) {
+        setError("Please login first to access real data");
+        return;
+      }
+
+      // Switching to Real mode - fetch data
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchDashboardData();
+        setRealData(data);
+        setIsRealMode(true);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch data");
+        setIsRealMode(false); // Stay in demo mode
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Switching to Demo mode
+      setIsRealMode(false);
+      setError(null);
+    }
+  };
+
+  // Auto-dismiss error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const activityData = [
     { name: "Mon", users: 1200, interactions: 4000 },
@@ -61,10 +139,43 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening with your platform.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening with your platform.</p>
+        </div>
+        
+        {/* Mode Toggle */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">
+            Mode: <span className="font-medium text-foreground">{isRealMode ? "Real" : "Demo"}</span>
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleModeToggle}
+            disabled={loading}
+            className="flex items-center gap-2"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isRealMode ? (
+              <ToggleRight className="h-4 w-4" />
+            ) : (
+              <ToggleLeft className="h-4 w-4" />
+            )}
+            {loading ? "Loading..." : isRealMode ? "Switch to Demo" : "Switch to Real"}
+          </Button>
+        </div>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="flex items-center gap-2 p-4 rounded-lg bg-destructive/10 text-destructive border border-destructive/20 animate-slide-in-bottom">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span className="text-sm">{error}</span>
+        </div>
+      )}
 
       {/* Stats grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">

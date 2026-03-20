@@ -1,25 +1,24 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+import { apiClient } from "./apiClient";
 
 export interface LoginResponse {
-  token: string;
-  admin: {
-    id: string;
-    email: string;
-    name: string;
+  message: string;
+  data: {
+    accessToken: string;
+    refreshToken: string;
+    user: {
+      id: string;
+      email: string;
+      fullName: string;
+      avatarUrl: string | null;
+      authProvider: string;
+      createdAt: string;
+      updatedAt: string;
+      premium: boolean;
+      setup: boolean;
+    };
   };
 }
 
 export async function loginAdmin(email: string, password: string): Promise<LoginResponse> {
-  const res = await fetch(`${API_BASE}/api/v1/admin/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message ?? "Invalid email or password");
-  }
-
-  return res.json();
+  return apiClient.post<LoginResponse>("/api/v1/admin/login", { email, password }, false);
 }

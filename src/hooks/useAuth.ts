@@ -5,10 +5,13 @@ const ADMIN_KEY = "admin_user";
 
 export function useAuth() {
   const login = async (email: string, password: string): Promise<LoginResponse> => {
-    const data = await loginAdmin(email, password);
-    localStorage.setItem(TOKEN_KEY, data.token);
-    localStorage.setItem(ADMIN_KEY, JSON.stringify(data.admin));
-    return data;
+    console.log("[useAuth] Attempting login for:", email);
+    const response = await loginAdmin(email, password);
+    const { accessToken, user } = response.data;
+    console.log("[useAuth] Login successful, storing token:", accessToken ? `${accessToken.substring(0, 20)}...` : "null");
+    localStorage.setItem(TOKEN_KEY, accessToken);
+    localStorage.setItem(ADMIN_KEY, JSON.stringify(user));
+    return response;
   };
 
   const logout = () => {
@@ -16,7 +19,11 @@ export function useAuth() {
     localStorage.removeItem(ADMIN_KEY);
   };
 
-  const getToken = () => localStorage.getItem(TOKEN_KEY);
+  const getToken = () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    console.log("[useAuth] Getting token:", token ? `${token.substring(0, 20)}...` : "null");
+    return token;
+  };
 
   const getAdmin = () => {
     try {
