@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Button,
   Input,
@@ -18,120 +18,121 @@ import {
   ModalDescription,
   ModalFooter,
 } from "@/components/common";
-import { Search, Filter, Plus, Eye, Pencil, Trash2, Users, Calendar, MoreHorizontal } from "lucide-react";
+import { Search, Plus, Eye, Users, Calendar, AlertCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { getFamilies, createFamily, type FamilyItem } from "@/services/familyService";
 
-interface Family {
-  id: string;
-  name: string;
-  members: number;
-  createdAt: string;
-  status: "active" | "inactive" | "pending";
-  owner: string;
-}
+const PAGE_SIZE = 10;
 
 const FamilyManagement = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedFamily, setSelectedFamily] = useState<Family | null>(null);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const { getToken } = useAuth();
+  const [keyword, setKeyword] = useState("");
+  const [inputKeyword, setInputKeyword] = useState("");
+  const [currentPage, setCurrentPage] = useState(0);
+  const [families, setFamilies] = useState<FamilyItem[]>([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const [selectedFamily, setSelectedFamily] = useState<FamilyItem | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
 
-  const families: Family[] = [
-    { id: "1", name: "Johnson Family", members: 5, createdAt: "2024-01-15", status: "active", owner: "Sarah Johnson" },
-    { id: "2", name: "Chen Family", members: 4, createdAt: "2024-01-18", status: "active", owner: "Mike Chen" },
-    { id: "3", name: "Davis Family", members: 3, createdAt: "2024-01-20", status: "pending", owner: "Emily Davis" },
-    { id: "4", name: "Smith Family", members: 6, createdAt: "2024-01-22", status: "active", owner: "John Smith" },
-    { id: "5", name: "Wang Family", members: 4, createdAt: "2024-01-25", status: "inactive", owner: "Lisa Wang" },
-    { id: "6", name: "Brown Family", members: 7, createdAt: "2024-02-01", status: "active", owner: "Robert Brown" },
-    { id: "7", name: "Garcia Family", members: 5, createdAt: "2024-02-05", status: "active", owner: "Maria Garcia" },
-    { id: "8", name: "Miller Family", members: 3, createdAt: "2024-02-10", status: "pending", owner: "David Miller" },
-    { id: "9", name: "Wilson Family", members: 4, createdAt: "2024-02-12", status: "active", owner: "Jennifer Wilson" },
-    { id: "10", name: "Taylor Family", members: 5, createdAt: "2024-02-15", status: "active", owner: "Chris Taylor" },
-  ];
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({ familyName: "", ownerEmail: "" });
+  const [createError, setCreateError] = useState("");
+  const [creating, setCreating] = useState(false);
 
-  const filteredFamilies = families.filter((family) => {
-    const matchesSearch = family.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      family.owner.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || family.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const fetchFamilies = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    setLoading(true);
+    setError("");
+    try {
+      const data = await getFamilies(token, keyword, currentPage, PAGE_SIZE);
+      setFamilies(data.content);
+      setTotalPages(data.totalPages);
+      setTotalElements(data.totalElements);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError(err instanceof Error ? err.message : "Failed to load families");
+    } finally {
+      setLoading(false);
+    }
+  }, [keyword, currentPage]);
 
-  const itemsPerPage = 8;
-  const totalPages = Math.ceil(filteredFamilies.length / itemsPerPage);
-  const paginatedFamilies = filteredFamilies.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  useEffect(() => {
+    fetchFamilies();
+  }, [fetchFamilies]);
 
-  const getStatusBadge = (status: Family["status"]) => {
-    const variants = {
-      active: "success",
-      inactive: "error",
-      pending: "warning",
-    } as const;
-    return <Badge variant={variants[status]}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentPage(0);
+    setKeyword(inputKeyword);
   };
 
-  const handleView = (family: Family) => {
+  const handleView = (family: FamilyItem) => {
     setSelectedFamily(family);
     setViewModalOpen(true);
   };
 
-  const handleDelete = (family: Family) => {
-    setSelectedFamily(family);
-    setDeleteModalOpen(true);
-  };
-
-  const confirmDelete = () => {
-    // Handle delete logic
-    setDeleteModalOpen(false);
-    setSelectedFamily(null);
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createForm.familyName || !createForm.ownerEmail) {
+      setCreateError("Please fill in all fields");
+      return;
+    }
+    setCreating(true);
+    setCreateError("");
+    try {
+      await createFamily(getToken()!, createForm);
+      setCreateModalOpen(false);
+      setCreateForm({ familyName: "", ownerEmail: "" });
+      setCurrentPage(0);
+      fetchFamilies();
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "Failed to create family");
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Family Management</h1>
           <p className="text-muted-foreground mt-1">Manage all family groups in the system</p>
         </div>
-        <Button>
+        <Button onClick={() => setCreateModalOpen(true)}>
           <Plus className="h-4 w-4" />
           Add Family
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* Search */}
       <Card className="p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <form onSubmit={handleSearch} className="flex gap-3">
           <div className="flex-1">
             <Input
-              placeholder="Search families or owners..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by family name or owner email..."
+              value={inputKeyword}
+              onChange={(e) => setInputKeyword(e.target.value)}
               leftIcon={<Search className="h-4 w-4" />}
             />
           </div>
-          <div className="flex gap-2">
-            <select
-              className="h-10 px-3 rounded-md border border-input bg-background text-sm"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="pending">Pending</option>
-            </select>
-            <Button variant="outline">
-              <Filter className="h-4 w-4" />
-              More Filters
-            </Button>
-          </div>
-        </div>
+          <Button type="submit">Search</Button>
+        </form>
       </Card>
+
+      {/* Error */}
+      {error && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Table */}
       <div className="animate-fade-in">
@@ -139,7 +140,7 @@ const FamilyManagement = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Family Name</TableHead>
-              <TableHead>Owner</TableHead>
+              <TableHead>Owner Email</TableHead>
               <TableHead>Members</TableHead>
               <TableHead>Created</TableHead>
               <TableHead>Status</TableHead>
@@ -147,53 +148,65 @@ const FamilyManagement = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedFamilies.map((family) => (
-              <TableRow key={family.id}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Users className="h-4 w-4 text-primary" />
-                    </div>
-                    <span className="font-medium">{family.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{family.owner}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>{family.members}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>{new Date(family.createdAt).toLocaleDateString()}</span>
-                  </div>
-                </TableCell>
-                <TableCell>{getStatusBadge(family.status)}</TableCell>
-                <TableCell>
-                  <div className="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="icon-sm" onClick={() => handleView(family)}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon-sm">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(family)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                  Loading...
                 </TableCell>
               </TableRow>
-            ))}
+            ) : families.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                  No families found
+                </TableCell>
+              </TableRow>
+            ) : (
+              families.map((family) => (
+                <TableRow key={family.familyId}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Users className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="font-medium">{family.familyName}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{family.ownerEmail}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>{family.memberCount}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>{new Date(family.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={family.status === "ACTIVE" ? "success" : "error"}>
+                      {family.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end">
+                      <Button variant="ghost" size="icon-sm" onClick={() => handleView(family)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
         <TablePagination
-          currentPage={currentPage}
+          currentPage={currentPage + 1}
           totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          totalItems={filteredFamilies.length}
-          itemsPerPage={itemsPerPage}
+          onPageChange={(p) => setCurrentPage(p - 1)}
+          totalItems={totalElements}
+          itemsPerPage={PAGE_SIZE}
         />
       </div>
 
@@ -202,60 +215,72 @@ const FamilyManagement = () => {
         <ModalContent>
           <ModalHeader>
             <ModalTitle>Family Details</ModalTitle>
-            <ModalDescription>View detailed information about this family group</ModalDescription>
+            <ModalDescription>Detailed information about this family group</ModalDescription>
           </ModalHeader>
           {selectedFamily && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-muted-foreground">Family Name</label>
-                  <p className="font-medium">{selectedFamily.name}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Owner</label>
-                  <p className="font-medium">{selectedFamily.owner}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Members</label>
-                  <p className="font-medium">{selectedFamily.members}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Status</label>
-                  <div className="mt-1">{getStatusBadge(selectedFamily.status)}</div>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Created Date</label>
-                  <p className="font-medium">{new Date(selectedFamily.createdAt).toLocaleDateString()}</p>
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Family Name</p>
+                <p className="font-medium">{selectedFamily.familyName}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Owner Email</p>
+                <p className="font-medium">{selectedFamily.ownerEmail}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Members</p>
+                <p className="font-medium">{selectedFamily.memberCount}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <Badge variant={selectedFamily.status === "ACTIVE" ? "success" : "error"} className="mt-1">
+                  {selectedFamily.status}
+                </Badge>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Created</p>
+                <p className="font-medium">{new Date(selectedFamily.createdAt).toLocaleString()}</p>
               </div>
             </div>
           )}
           <ModalFooter>
-            <Button variant="outline" onClick={() => setViewModalOpen(false)}>
-              Close
-            </Button>
-            <Button>Edit Family</Button>
+            <Button variant="outline" onClick={() => setViewModalOpen(false)}>Close</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
-      <Modal open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+      {/* Create Modal */}
+      <Modal open={createModalOpen} onOpenChange={setCreateModalOpen}>
         <ModalContent size="sm">
           <ModalHeader>
-            <ModalTitle>Delete Family</ModalTitle>
-            <ModalDescription>
-              Are you sure you want to delete "{selectedFamily?.name}"? This action cannot be undone.
-            </ModalDescription>
+            <ModalTitle>Add Family</ModalTitle>
+            <ModalDescription>Create a new family group</ModalDescription>
           </ModalHeader>
-          <ModalFooter>
-            <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
-            </Button>
-          </ModalFooter>
+          <form onSubmit={handleCreate} className="space-y-4">
+            {createError && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{createError}</span>
+              </div>
+            )}
+            <Input
+              label="Family Name"
+              placeholder="Nhà Nguyễn"
+              value={createForm.familyName}
+              onChange={(e) => setCreateForm((f) => ({ ...f, familyName: e.target.value }))}
+            />
+            <Input
+              type="email"
+              label="Owner Email"
+              placeholder="owner@example.com"
+              value={createForm.ownerEmail}
+              onChange={(e) => setCreateForm((f) => ({ ...f, ownerEmail: e.target.value }))}
+            />
+            <ModalFooter>
+              <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
+              <Button type="submit" loading={creating}>Create</Button>
+            </ModalFooter>
+          </form>
         </ModalContent>
       </Modal>
     </div>

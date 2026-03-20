@@ -1,5 +1,6 @@
 import React from "react";
-import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, useLocation, Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/common";
 import {
@@ -44,8 +45,12 @@ const NavItem = ({ to, icon, label, onClick }: NavItemProps) => {
 
 const AdminLayout = () => {
   const navigate = useNavigate();
+  const { logout, getAdmin, isAuthenticated } = useAuth();
+  const admin = getAdmin();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [userMenuOpen, setUserMenuOpen] = React.useState(false);
+
+  if (!isAuthenticated()) return <Navigate to="/login" replace />;
 
   const navItems = [
     { to: "/dashboard", icon: <LayoutDashboard className="h-5 w-5" />, label: "Dashboard" },
@@ -55,6 +60,7 @@ const AdminLayout = () => {
   ];
 
   const handleLogout = () => {
+    logout();
     navigate("/login");
   };
 
@@ -129,9 +135,11 @@ const AdminLayout = () => {
                 className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground text-sm font-medium">JD</span>
+                  <span className="text-primary-foreground text-sm font-medium">
+                    {admin?.name?.slice(0, 2).toUpperCase() ?? "AD"}
+                  </span>
                 </div>
-                <span className="hidden md:block text-sm font-medium">John Doe</span>
+                <span className="hidden md:block text-sm font-medium">{admin?.name ?? "Admin"}</span>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </button>
 
@@ -140,8 +148,8 @@ const AdminLayout = () => {
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                   <div className="absolute right-0 top-full mt-2 w-48 bg-card border rounded-lg shadow-lg z-50 py-1">
                     <div className="px-4 py-2 border-b">
-                      <p className="text-sm font-medium">John Doe</p>
-                      <p className="text-xs text-muted-foreground">admin@example.com</p>
+                      <p className="text-sm font-medium">{admin?.name ?? "Admin"}</p>
+                      <p className="text-xs text-muted-foreground">{admin?.email ?? ""}</p>
                     </div>
                     <button
                       onClick={handleLogout}

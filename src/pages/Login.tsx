@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/common";
 import { Mail, Lock, AlertCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,16 +22,14 @@ const Login = () => {
     }
 
     setLoading(true);
-
-    // Simulate login
-    setTimeout(() => {
-      if (email === "admin@example.com" && password === "admin123") {
-        navigate("/dashboard");
-      } else {
-        setError("Invalid email or password");
-      }
+    try {
+      await login(email, password);
+      navigate("/dashboard");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid email or password");
+    } finally {
       setLoading(false);
-    }, 1);
+    }
   };
 
   return (
