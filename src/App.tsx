@@ -14,6 +14,7 @@ import Dashboard from "./pages/Dashboard";
 import FamilyManagement from "./pages/FamilyManagement";
 import AIFeedback from "./pages/AIFeedback";
 import AIControl from "./pages/AIControl";
+import CreateAdmin from "./pages/CreateAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/families" element={<FamilyManagement />} />
             <Route path="/ai-feedback" element={<AIFeedback />} />
             <Route path="/ai-control" element={<AIControl />} />
+            <Route path="/create-admin" element={<CreateAdmin />} />
           </Route>
 
           {/* Catch-all */}
